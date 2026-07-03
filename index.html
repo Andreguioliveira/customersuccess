@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login — Refuturiza 360</title>
+<!-- Script Oficial do Supabase Client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --orange:#F84001; --green-dark:#024632; --ink:#322F2E; --bg:#FAF7F3;
@@ -18,7 +20,8 @@
   form{display:flex;flex-direction:column;gap:16px;text-align:left}
   label{font-size:12px;font-weight:700;color:var(--green-dark)}
   input{padding:12px;border:1px solid #ece6de;border-radius:8px;font-family:inherit;font-size:14px}
-  .btn{background:var(--orange);color:#fff;border:0;border-radius:8px;padding:14px;font-weight:700;cursor:pointer;margin-top:8px}
+  .btn{background:var(--orange);color:#fff;border:0;border-radius:8px;padding:14px;font-weight:700;cursor:pointer;margin-top:8px;position:relative}
+  .btn:disabled{background:#ccc;cursor:not-allowed}
   .error{color:#e52f2d;font-size:12px;margin-top:12px;display:none}
 </style>
 </head>
@@ -27,28 +30,64 @@
   <div class="wordmark">re<b>futuriza</b> 360</div>
   <div class="tagline">Portal de Customer Success</div>
   <form id="loginForm">
-    <label>Usuário</label>
-    <input type="text" id="username" required placeholder="admin">
+    <label>E-mail Corporativo</label>
+    <input type="email" id="email" required placeholder="seu.nome@refuturiza.com.br">
     <label>Senha</label>
-    <input type="password" id="password" required placeholder="•••">
-    <button type="submit" class="btn">Entrar</button>
-    <div id="errorMsg" class="error">Usuário ou senha incorretos.</div>
+    <input type="password" id="password" required placeholder="••••••••">
+    <button type="submit" class="btn" id="submitBtn">Entrar</button>
+    <div id="errorMsg" class="error">E-mail ou senha inválidos. Verifique as credenciais.</div>
   </form>
 </div>
+
 <script>
-document.getElementById('loginForm').onsubmit = (e) => {
+// Credenciais de conexão do seu projeto
+const SUPABASE_URL = "https://laywwovrscbinipppjfw.supabase.co"; 
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxheXd3b3Zyc2NiaW5pcHBwamZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwOTAzMTUsImV4cCI6MjA5ODY2NjMxNX0.zGub-fupurm5MuoKedqr7_lw0oEeqc7flzMeawAkknk";
+
+// Inicializa o cliente do Supabase
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+document.getElementById('loginForm').onsubmit = async (e) => {
   e.preventDefault();
-  const username = document.getElementById('username').value;
+  
+  const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   const errorMsg = document.getElementById('errorMsg');
+  const submitBtn = document.getElementById('submitBtn');
   
-  // Validação estática direta via Frontend
-  if (username === 'admin' && password === '123') {
+  // Oculta mensagens de erro anteriores e desabilita o botão para evitar cliques duplos
+  errorMsg.style.display = 'none';
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Autenticando...';
+  
+  try {
+    // Realiza o login direto na estrutura segura auth.users do Supabase
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
+    
+    if (error) throw error;
+    
+    // Se o login deu certo, redireciona o usuário para o dashboard principal
     window.location.href = 'cs-dashboard.html';
-  } else {
+    
+  } catch (err) {
+    console.error("Erro na autenticação:", err.message);
     errorMsg.style.display = 'block';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Entrar';
   }
 };
+
+// Checagem proativa: se o usuário já estiver logado, manda ele direto para o dashboard
+async function checkActiveSession() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    window.location.href = 'cs-dashboard.html';
+  }
+}
+checkActiveSession();
 </script>
 </body>
 </html>
