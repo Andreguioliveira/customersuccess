@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Customer Success — Refuturiza 360</title>
+<!-- Scripts Oficiais: Chart.js e Supabase Client -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     color-scheme: light;
@@ -90,7 +92,7 @@
     <div class="tagline">Customer Success · Emprego e Educação para Todos</div>
   </div>
   <div class="hdr-right">
-    <div class="hdr-meta">Olá, <span id="user-name">...</span><br><span id="hdr-date"></span></div>
+    <div class="hdr-meta">Olá, <span id="user-name">Admin</span><br><span id="hdr-date"></span></div>
     <button class="btn ghost sm" style="color:#fff;border-color:rgba(255,255,255,0.3)" onclick="logout()">Sair</button>
   </div>
 </header>
@@ -100,12 +102,11 @@
   <button data-tab="portfolio">Carteira</button>
   <button data-tab="journey">Jornadas</button>
   <button data-tab="alerts">Alertas</button>
-  <button data-tab="admin">Administração</button>
 </nav>
 
 <main>
   <div class="databar" id="databar">
-    <span>✅ <b>Sessão Ativa.</b> Gerencie sua carteira de clientes em tempo real.</span>
+    <span>✅ <b>Nuvem Ativa (Supabase Pro).</b> Gerencie sua carteira de clientes em tempo real.</span>
     <button class="btn" onclick="openModal()">+ Adicionar Conta</button>
     <button class="btn ghost" onclick="exportCSV()">Exportar CSV</button>
     <input type="file" id="csvInput" accept=".csv" style="display:none">
@@ -139,27 +140,13 @@
       <div><h3 style="color:var(--green-mid);margin-bottom:10px">📈 Oportunidades de upgrade</h3><div id="upgradeAlerts"></div></div>
     </div>
   </section>
-
-  <section class="tab" id="admin">
-    <div class="sec-title">Configurações do Portal</div>
-    <div class="panel" style="max-width:400px">
-      <h3>Alterar Senha</h3>
-      <form id="pwForm">
-        <div class="f-group" style="margin-bottom:12px">
-          <label>Nova Senha</label>
-          <input type="password" id="new-pw" required>
-        </div>
-        <button type="submit" class="btn">Atualizar Senha</button>
-      </form>
-    </div>
-  </section>
 </main>
 
 <div class="modal-ovl" id="modalOvl">
   <div class="modal">
     <h2 id="modalTitle">Adicionar Conta</h2>
     <form id="accountForm">
-      <input type="hidden" id="f-index">
+      <input type="hidden" id="f-id">
       <div class="form-grid">
         <div class="f-group"><label>Nome da Conta</label><input type="text" id="f-name" required></div>
         <div class="f-group"><label>CSM Responsável</label><input type="text" id="f-csm" required></div>
@@ -191,7 +178,14 @@
 </div>
 
 <script>
-/* Helper for safe text rendering (XSS Protection) */
+// ==========================================
+// CONFIGURAÇÃO DO CONFIGURAÇÃO DO SUPABASE
+// ==========================================
+const SUPABASE_URL = "https://SEU_PROJETO.supabase.co"; // SUBSTRITUA PELA SUA URL DO SUPABASE
+const SUPABASE_ANON_KEY = "SUA_CHAVE_ANON_KEY";       // SUBSTITUA PELA SUA CHAVE ANON KEY DO SUPABASE
+
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 function esc(str){
   if(!str) return '';
   const d = document.createElement('div');
@@ -206,9 +200,6 @@ const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).tri
 document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
 
 const COLS=["name","csm","plan","mrrStart","mrrNow","seatsEnt","seatsAct","loginFreq","lastContact","champion","contacts","tickets","critTickets","csat","nps","pay","stage","renewalDays"];
-
-function rowToObj(r){const o={};COLS.forEach((k,i)=>o[k]=r[i]);o.champion=(''+o.champion).trim().toLowerCase().startsWith('s');o.pay=(''+o.pay).toLowerCase().includes('atras')?'late':'ok';return o;}
-function objToRow(o){return COLS.map(k=>{if(k==='champion')return o.champion?'Sim':'Não';if(k==='pay')return o.pay==='late'?'Atrasado':'Em dia';return o[k];});}
 
 function enrich(a){
   const seatUtil=a.seatsEnt?a.seatsAct/a.seatsEnt:0;
@@ -232,35 +223,25 @@ function enrich(a){
   return {...a,seatUtil,health,churn,renewalDays,farol,upgrade,expansionPot,upliftSeats};
 }
 
-let DATA_ROWS=[], DATA=[],ACTIVE=[],AGG={},sortKey='health',sortDir=-1;
+let DATA=[],ACTIVE=[],AGG={},sortKey='health',sortDir=-1;
 const charts={};
 
-async function checkAuth(){
-  const res = await fetch('/api/me');
-  const user = await res.json();
-  if(!user) window.location.href = '/login';
-  document.getElementById('user-name').textContent = user.username;
-  if(user.role !== 'admin') document.querySelector('button[data-tab="admin"]').style.display = 'none';
+function logout(){
+  window.location.href = 'index.html';
 }
 
-async function logout(){
-  await fetch('/api/logout', {method:'POST'});
-  window.location.href = '/login';
-}
-
+// BUSCAR CONTAS DO SUPABASE
 async function loadData(){
-  const res=await fetch('/api/accounts');
-  if(res.status===401) return logout();
-  DATA_ROWS=await res.json();
-  rebuild(DATA_ROWS);
+  const { data, error } = await supabase.from('accounts').select('*');
+  if(error) {
+    console.error("Erro ao carregar dados do Supabase:", error);
+    return;
+  }
+  rebuild(data || []);
 }
 
-async function saveData(){
-  await fetch('/api/accounts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(DATA_ROWS)});
-}
-
-function rebuild(rawRows){
-  DATA=rawRows.map(rowToObj).map(enrich);
+function rebuild(rawItems){
+  DATA=rawItems.map(enrich);
   ACTIVE=DATA.filter(d=>d.mrrNow>0);
   const startMRR=DATA.reduce((s,d)=>s+d.mrrStart,0)||1;
   const nowCohort=DATA.reduce((s,d)=>s+d.mrrNow,0);
@@ -305,14 +286,13 @@ function renderCharts(){
 
 function renderTable(){
   const t=document.getElementById('portfolioTable');
-  const itemsWithIdx = DATA.map((d,i) => ({...d, _origIdx: i}));
-  const sorted=itemsWithIdx.filter(d=>d.mrrNow>0).sort((a,b)=>{let x=a[sortKey],y=b[sortKey];return typeof x==='string'?x.localeCompare(y)*sortDir:(x-y)*sortDir;});
+  const sorted=DATA.filter(d=>d.mrrNow>0).sort((a,b)=>{let x=a[sortKey],y=b[sortKey];return typeof x==='string'?x.localeCompare(y)*sortDir:(x-y)*sortDir;});
   let h='<thead><tr><th>Conta</th><th>CSM</th><th class="num">MRR</th><th class="num">Health</th><th>Farol</th><th>Jornada</th><th>Ações</th></tr></thead><tbody>';
   sorted.forEach(d=>{
     const fcls={verde:'v',amarelo:'a',vermelho:'r'}[d.farol],flabel={verde:'Saudável',amarelo:'Atenção',vermelho:'Risco'}[d.farol];
     const hcol=d.health>=70?'var(--green-mid)':d.health>=50?'var(--amber)':'var(--red)';
     h+=`<tr><td><b>${esc(d.name)}</b></td><td>${esc(d.csm)}</td><td class="num">${fmtBRL(d.mrrNow)}</td><td class="num" style="font-weight:700;color:${hcol}">${d.health}</td><td><span class="pill ${fcls}">${flabel}</span></td><td>${esc(d.stage)}</td>
-    <td><button class="btn sm" onclick="editAccount(${d._origIdx})">Editar</button> <button class="btn sm danger" onclick="deleteAccount(${d._origIdx})">Excluir</button></td></tr>`;
+    <td><button class="btn sm" onclick="editAccount('${d.id}')">Editar</button> <button class="btn sm danger" onclick="deleteAccount('${d.id}')">Excluir</button></td></tr>`;
   });
   t.innerHTML=h+'</tbody>';
 }
@@ -333,23 +313,40 @@ function renderAlerts(){
 }
 
 /* Modal */
-function openModal(idx=null){
+function openModal(id=null){
   document.getElementById('modalOvl').classList.add('active');
   document.getElementById('accountForm').reset();
-  document.getElementById('f-index').value = idx!==null?idx:'';
-  if(idx!==null){
-    const d = DATA[idx];
-    document.getElementById('f-name').value = d.name;
-    document.getElementById('f-csm').value = d.csm;
-    document.getElementById('f-mrrNow').value = d.mrrNow;
-    document.getElementById('f-stage').value = d.stage;
+  document.getElementById('f-id').value = id!==null?id:'';
+  if(id!==null){
+    const d = DATA.find(item => item.id === id);
+    if(d){
+      document.getElementById('f-name').value = d.name;
+      document.getElementById('f-csm').value = d.csm;
+      document.getElementById('f-plan').value = d.plan;
+      document.getElementById('f-mrrStart').value = d.mrrStart;
+      document.getElementById('f-mrrNow').value = d.mrrNow;
+      document.getElementById('f-seatsEnt').value = d.seatsEnt;
+      document.getElementById('f-seatsAct').value = d.seatsAct;
+      document.getElementById('f-loginFreq').value = d.loginFreq;
+      document.getElementById('f-lastContact').value = d.lastContact;
+      document.getElementById('f-champion').value = d.champion ? 'Sim' : 'Não';
+      document.getElementById('f-contacts').value = d.contacts;
+      document.getElementById('f-tickets').value = d.tickets;
+      document.getElementById('f-critTickets').value = d.critTickets;
+      document.getElementById('f-csat').value = d.csat;
+      document.getElementById('f-nps').value = d.nps;
+      document.getElementById('f-pay').value = d.pay === 'late' ? 'Atrasado' : 'Em dia';
+      document.getElementById('f-stage').value = d.stage;
+      document.getElementById('f-renewalDays').value = d.renewalDays;
+    }
   }
 }
 function closeModal(){document.getElementById('modalOvl').classList.remove('active');}
 
+// SALVAR/ATUALIZAR CONTA NO SUPABASE
 document.getElementById('accountForm').onsubmit=async(e)=>{
   e.preventDefault();
-  const idx = document.getElementById('f-index').value;
+  const id = document.getElementById('f-id').value;
   const o = {
     name: document.getElementById('f-name').value,
     csm: document.getElementById('f-csm').value,
@@ -370,32 +367,82 @@ document.getElementById('accountForm').onsubmit=async(e)=>{
     stage: document.getElementById('f-stage').value,
     renewalDays: parseInt(document.getElementById('f-renewalDays').value)||365
   };
-  const row = objToRow(o);
-  if(idx==='') DATA_ROWS.push(row); else DATA_ROWS[idx] = row;
-  await saveData(); loadData(); closeModal();
+
+  if(id === '') {
+    // Inserir Nova Conta
+    await supabase.from('accounts').insert([o]);
+  } else {
+    // Atualizar Conta Existente
+    await supabase.from('accounts').update(o).eq('id', id);
+  }
+  loadData(); closeModal();
 };
 
-function editAccount(idx){ openModal(idx); }
-function deleteAccount(idx){ if(confirm('Excluir conta?')){ DATA_ROWS.splice(idx,1); saveData().then(loadData); } }
+function editAccount(id){ openModal(id); }
 
-document.getElementById('pwForm').onsubmit=async(e)=>{
-  e.preventDefault();
-  const newPassword = document.getElementById('new-pw').value;
-  const res = await fetch('/api/admin/change-password', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({newPassword})
-  });
-  if(res.ok) alert('Senha atualizada!');
-};
+async function deleteAccount(id){ 
+  if(confirm('Excluir conta definitivamente do banco de dados?')){ 
+    await supabase.from('accounts').delete().eq('id', id);
+    loadData();
+  } 
+}
 
+// EXPORTAR DADOS EM CSV
 function exportCSV(){
   let csv = COLS.join(',') + '\n';
-  DATA_ROWS.forEach(r => csv += r.map(v => typeof v==='string' && v.includes(',') ? `"${v}"` : v).join(',') + '\n');
+  DATA.forEach(d => {
+    const row = [d.name, d.csm, d.plan, d.mrrStart, d.mrrNow, d.seatsEnt, d.seatsAct, d.loginFreq, d.lastContact, d.champion?'Sim':'Não', d.contacts, d.tickets, d.critTickets, d.csat, d.nps, d.pay==='late'?'Atrasado':'Em dia', d.stage, d.renewalDays];
+    csv += row.map(v => typeof v==='string' && v.includes(',') ? `"${v}"` : v).join(',') + '\n';
+  });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-  link.setAttribute("download", "cs_data.csv");
+  link.setAttribute("download", "cs_data_supabase.csv");
   link.click();
 }
+
+// IMPORTAR PLANILHA CSV DIRETAMENTE PARA O SUPABASE
+document.getElementById('csvInput').onchange = function(e) {
+  const reader = new FileReader();
+  reader.onload = async function() {
+    const lines = reader.result.split('\n');
+    const importedAccounts = [];
+    
+    // Ignora o cabeçalho e lê as linhas
+    for(let i = 1; i < lines.length; i++) {
+      if(!lines[i].trim()) continue;
+      const values = lines[i].split(',');
+      
+      importedAccounts.push({
+        name: values[0]?.replace(/"/g, ''),
+        csm: values[1],
+        plan: values[2],
+        mrrStart: parseFloat(values[3]) || 0,
+        mrrNow: parseFloat(values[4]) || 0,
+        seatsEnt: parseInt(values[5]) || 0,
+        seatsAct: parseInt(values[6]) || 0,
+        loginFreq: parseInt(values[7]) || 0,
+        lastContact: parseInt(values[8]) || 0,
+        champion: values[9]?.trim().toLowerCase() === 'sim',
+        contacts: parseInt(values[10]) || 0,
+        tickets: parseInt(values[11]) || 0,
+        critTickets: parseInt(values[12]) || 0,
+        csat: parseInt(values[13]) || 0,
+        nps: parseInt(values[14]) || 0,
+        pay: values[15]?.includes('Atras') ? 'late' : 'ok',
+        stage: values[16] || 'Onboarding',
+        renewalDays: parseInt(values[17]) || 365
+      });
+    }
+    
+    if(importedAccounts.length > 0) {
+      alert(`Processando a importação de ${importedAccounts.length} contas para o Supabase...`);
+      await supabase.from('accounts').insert(importedAccounts);
+      loadData();
+      alert('Importação concluída com sucesso!');
+    }
+  };
+  reader.readAsText(e.target.files[0]);
+};
 
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));
@@ -403,7 +450,8 @@ document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
   b.classList.add('active');document.getElementById(b.dataset.tab).classList.add('active');
 });
 
-checkAuth().then(loadData);
+// Inicialização Automatizada
+loadData();
 </script>
 </body>
 </html>
