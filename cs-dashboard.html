@@ -226,7 +226,13 @@ const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).tri
 document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
 
 const COLS=["name","csm","plan","mrrStart","mrrNow","seatsEnt","seatsAct","loginFreq","lastContact","champion","contacts","tickets","critTickets","csat","nps","pay","stage","renewalDays"];
-const ADMINS = ['andre.oliveira@refuturiza.com.br', 'lizi.rodrigues@refuturiza.com.br'];
+const ADMINS = [
+  'andre.oliveira@refuturiza.com.br', 
+  'lizi.rodrigues@refuturiza.com.br',
+  'angela.santos@refuturiza.com.br',
+  'rafael.pinho@refuturiza.com.br',
+  'marcos.zanetti@refuturiza.com.br'
+];
 
 let currentUser = null;
 let isAdmin = false;
