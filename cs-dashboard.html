@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Success — Refuturiza 360</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
+<style>
+  :root{
+    color-scheme: light;
+    --orange:#F84001; --green-dark:#024632; --green-mid:#13BC65; --amber:#FE930D;
+    --teal:#63A5A4; --beige:#F8E0C5; --green-light:#B7FEB1; --ink:#322F2E; --brown:#6F5F4F;
+    --red:#E52F2D; --bg:#FAF7F3; --card:#FFFFFF; --line:#ECE6DE;
+    --font-h:'Nunito','Poppins','Segoe UI',system-ui,sans-serif;
+    --font-b:'Poppins','Inter','Segoe UI',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-b);font-size:14px;line-height:1.45}
+  h1,h2,h3,h4{font-family:var(--font-h);font-weight:800;margin:0}
+  header{background:var(--green-dark);color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  .wordmark{font-family:var(--font-h);font-weight:900;font-size:22px;color:#fff;letter-spacing:.5px}
+  .wordmark b{color:var(--orange)}
+  .tagline{font-size:10px;letter-spacing:2px;color:var(--beige);text-transform:uppercase;margin-top:2px}
+  .hdr-right{display:flex;align-items:center;gap:20px}
+  .hdr-meta{font-size:12px;color:var(--beige);text-align:right}
+  nav{background:var(--card);border-bottom:1px solid var(--line);padding:0 16px;display:flex;gap:4px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+  nav button{border:0;background:transparent;padding:14px 16px;font-family:var(--font-b);font-weight:600;font-size:13px;color:var(--brown);cursor:pointer;border-bottom:3px solid transparent}
+  nav button.active{color:var(--orange);border-bottom-color:var(--orange)}
+  nav button:hover{color:var(--ink)}
+  main{padding:20px 24px;max-width:1240px;margin:0 auto}
+  .tab{display:none}.tab.active{display:block}
+  .sec-title{font-size:18px;color:var(--orange);margin:4px 0 2px}
+  .sec-sub{color:var(--brown);font-size:13px;margin-bottom:16px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;border-top:4px solid var(--teal)}
+  .kpi .label{font-size:12px;color:var(--brown);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+  .kpi .val{font-family:var(--font-h);font-weight:900;font-size:28px;margin-top:6px}
+  .kpi .hint{font-size:11px;color:var(--brown);margin-top:4px}
+  .kpi.good{border-top-color:var(--green-mid)}.kpi.warn{border-top-color:var(--amber)}.kpi.bad{border-top-color:var(--red)}.kpi.key{border-top-color:var(--orange)}
+  .row{display:grid;gap:16px;margin-bottom:22px}
+  .row.two{grid-template-columns:1fr 1fr}
+  @media(max-width:900px){.row.two{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .panel h3{font-size:15px;margin-bottom:12px;color:var(--ink)}
+  .chart-wrap{position:relative;height:240px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+  th{font-weight:700;color:var(--brown);font-size:11px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;user-select:none;white-space:nowrap}
+  th:hover{color:var(--orange)}
+  tbody tr:nth-child(even){background:var(--beige)}
+  tbody tr:hover{background:#fff3e8}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .farol{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .f-verde{background:var(--green-mid)}.f-amarelo{background:var(--amber)}.f-vermelho{background:var(--red)}
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700}
+  .pill.v{background:#dff7e9;color:#0b7a40}.pill.a{background:#fff0d6;color:#a85f00}.pill.r{background:#fde0df;color:#a31613}
+  .bar{height:8px;border-radius:6px;background:var(--line);overflow:hidden;display:inline-block;width:70px;vertical-align:middle}
+  .bar>span{display:block;height:100%}
+  .journey{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+  @media(max-width:900px){.journey{grid-template-columns:1fr 1fr}}
+  .stage{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;border-top:4px solid var(--teal)}
+  .stage h4{font-size:12px;color:var(--green-dark);text-transform:uppercase;letter-spacing:.3px}
+  .stage .cnt{font-family:var(--font-h);font-weight:900;font-size:26px;color:var(--orange);margin:6px 0}
+  .stage .acct{font-size:11px;color:var(--brown);padding:3px 0;border-top:1px dashed var(--line);display:flex;justify-content:space-between;gap:4px}
+  .alert{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--red);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+  .alert.up{border-left-color:var(--green-mid)}
+  .alert .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .alert .acct-name{font-weight:800;font-size:14px}
+  .alert .why{font-size:12px;color:var(--brown);margin-top:5px}
+  .alert .action{font-size:12px;margin-top:6px;background:var(--beige);padding:6px 9px;border-radius:7px}
+  .tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;margin-left:5px}
+  .databar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#dff7e9;border:1px solid var(--green-mid);color:#0b7a40;border-radius:10px;padding:10px 14px;font-size:12.5px;margin-bottom:18px}
+  .btn{background:var(--orange);color:#fff;border:0;border-radius:8px;padding:8px 14px;font-family:var(--font-b);font-weight:700;font-size:12.5px;cursor:pointer}
+  .btn.ghost{background:transparent;color:var(--brown);border:1px solid var(--line)}
+  .btn.sm{padding:4px 8px;font-size:11px}
+  .btn.danger{background:var(--red)}
+  .modal-ovl{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center}
+  .modal-ovl.active{display:flex}
+  .modal{background:#fff;border-radius:12px;width:95%;max-width:800px;max-height:90vh;overflow-y:auto;padding:24px;position:relative}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px}
+  .f-group{display:flex;flex-direction:column;gap:5px}
+  .f-group label{font-size:11px;font-weight:700;color:var(--brown);text-transform:uppercase}
+  .f-group input, .f-group select{padding:8px;border:1px solid var(--line);border-radius:6px;font-family:inherit}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="wordmark">re<b>futuriza</b> 360</div>
+    <div class="tagline">Customer Success · Emprego e Educação para Todos</div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-meta">Olá, <span id="user-name">...</span><br><span id="hdr-date"></span></div>
+    <button class="btn ghost sm" style="color:#fff;border-color:rgba(255,255,255,0.3)" onclick="logout()">Sair</button>
+  </div>
+</header>
+
+<nav id="tabs">
+  <button data-tab="overview" class="active">Visão geral</button>
+  <button data-tab="portfolio">Carteira</button>
+  <button data-tab="journey">Jornadas</button>
+  <button data-tab="alerts">Alertas</button>
+  <button data-tab="admin">Administração</button>
+</nav>
+
+<main>
+  <div class="databar" id="databar">
+    <span>✅ <b>Sessão Ativa.</b> Gerencie sua carteira de clientes em tempo real.</span>
+    <button class="btn" onclick="openModal()">+ Adicionar Conta</button>
+    <button class="btn ghost" onclick="exportCSV()">Exportar CSV</button>
+    <input type="file" id="csvInput" accept=".csv" style="display:none">
+    <button class="btn ghost" onclick="document.getElementById('csvInput').click()">Importar CSV</button>
+  </div>
+
+  <section class="tab active" id="overview">
+    <div class="sec-title">Visão geral da carteira</div>
+    <div class="sec-sub">Retenção, saúde e risco — indicadores principais.</div>
+    <div class="kpis" id="kpi-row"></div>
+    <div class="row two">
+      <div class="panel"><h3>Distribuição do farol de risco</h3><div class="chart-wrap"><canvas id="farolChart"></canvas></div></div>
+      <div class="panel"><h3>Retenção de receita (12 meses)</h3><div class="chart-wrap"><canvas id="retentionChart"></canvas></div></div>
+    </div>
+  </section>
+
+  <section class="tab" id="portfolio">
+    <div class="sec-title">Carteira de contas</div>
+    <div class="panel" style="padding:4px"><div style="overflow-x:auto"><table id="portfolioTable"></table></div></div>
+  </section>
+
+  <section class="tab" id="journey">
+    <div class="sec-title">Jornadas dos clientes</div>
+    <div class="journey" id="journeyBoard"></div>
+  </section>
+
+  <section class="tab" id="alerts">
+    <div class="sec-title">Alertas acionáveis</div>
+    <div class="row two">
+      <div><h3 style="color:var(--red);margin-bottom:10px">🚨 Risco de churn</h3><div id="churnAlerts"></div></div>
+      <div><h3 style="color:var(--green-mid);margin-bottom:10px">📈 Oportunidades de upgrade</h3><div id="upgradeAlerts"></div></div>
+    </div>
+  </section>
+
+  <section class="tab" id="admin">
+    <div class="sec-title">Configurações do Portal</div>
+    <div class="panel" style="max-width:400px">
+      <h3>Alterar Senha</h3>
+      <form id="pwForm">
+        <div class="f-group" style="margin-bottom:12px">
+          <label>Nova Senha</label>
+          <input type="password" id="new-pw" required>
+        </div>
+        <button type="submit" class="btn">Atualizar Senha</button>
+      </form>
+    </div>
+  </section>
+</main>
+
+<div class="modal-ovl" id="modalOvl">
+  <div class="modal">
+    <h2 id="modalTitle">Adicionar Conta</h2>
+    <form id="accountForm">
+      <input type="hidden" id="f-index">
+      <div class="form-grid">
+        <div class="f-group"><label>Nome da Conta</label><input type="text" id="f-name" required></div>
+        <div class="f-group"><label>CSM Responsável</label><input type="text" id="f-csm" required></div>
+        <div class="f-group"><label>Plano</label><select id="f-plan"><option>Enterprise</option><option>Growth</option><option>Starter</option></select></div>
+        <div class="f-group"><label>MRR Inicial</label><input type="number" id="f-mrrStart" value="0"></div>
+        <div class="f-group"><label>MRR Atual</label><input type="number" id="f-mrrNow" value="0"></div>
+        <div class="f-group"><label>Licenças Contratadas</label><input type="number" id="f-seatsEnt" value="0"></div>
+        <div class="f-group"><label>Licenças Ativas</label><input type="number" id="f-seatsAct" value="0"></div>
+        <div class="f-group"><label>Freq. Login (0-100)</label><input type="number" id="f-loginFreq" min="0" max="100" value="0"></div>
+        <div class="f-group"><label>Dias s/ contato</label><input type="number" id="f-lastContact" value="0"></div>
+        <div class="f-group"><label>Possui Champion?</label><select id="f-champion"><option value="Sim">Sim</option><option value="Não">Não</option></select></div>
+        <div class="f-group"><label>Nº Contatos Engajados</label><input type="number" id="f-contacts" value="0"></div>
+        <div class="f-group"><label>Tickets Abertos</label><input type="number" id="f-tickets" value="0"></div>
+        <div class="f-group"><label>Tickets Críticos</label><input type="number" id="f-critTickets" value="0"></div>
+        <div class="f-group"><label>CSAT (0-100)</label><input type="number" id="f-csat" min="0" max="100" value="0"></div>
+        <div class="f-group"><label>NPS (-100 a 100)</label><input type="number" id="f-nps" min="-100" max="100" value="0"></div>
+        <div class="f-group"><label>Status Pagamento</label><select id="f-pay"><option value="Em dia">Em dia</option><option value="Atrasado">Atrasado</option></select></div>
+        <div class="f-group"><label>Estágio Jornada</label><select id="f-stage">
+          <option>Onboarding</option><option>Adoção</option><option>Engajamento</option><option>Expansão</option><option>Renovação</option><option>Advocacia</option><option>Churn</option>
+        </select></div>
+        <div class="f-group"><label>Dias p/ Renovação</label><input type="number" id="f-renewalDays" value="365"></div>
+      </div>
+      <div style="margin-top:24px;display:flex;justify-content:flex-end;gap:10px">
+        <button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn">Salvar Conta</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+/* Helper for safe text rendering (XSS Protection) */
+function esc(str){
+  if(!str) return '';
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+const clamp=(v,a=0,b=100)=>Math.max(a,Math.min(b,v));
+const fmtBRL=v=>'R$ '+Math.round(v).toLocaleString('pt-BR');
+const fmtK=v=>'R$ '+(v/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+'k';
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+
+const COLS=["name","csm","plan","mrrStart","mrrNow","seatsEnt","seatsAct","loginFreq","lastContact","champion","contacts","tickets","critTickets","csat","nps","pay","stage","renewalDays"];
+
+function rowToObj(r){const o={};COLS.forEach((k,i)=>o[k]=r[i]);o.champion=(''+o.champion).trim().toLowerCase().startsWith('s');o.pay=(''+o.pay).toLowerCase().includes('atras')?'late':'ok';return o;}
+function objToRow(o){return COLS.map(k=>{if(k==='champion')return o.champion?'Sim':'Não';if(k==='pay')return o.pay==='late'?'Atrasado':'Em dia';return o[k];});}
+
+function enrich(a){
+  const seatUtil=a.seatsEnt?a.seatsAct/a.seatsEnt:0;
+  const sAdocao=clamp(0.6*(seatUtil*100)+0.4*a.loginFreq);
+  const sRelac=clamp((a.champion?45:0)+clamp(a.contacts*10,0,30)+clamp(25-(a.lastContact/3),0,25));
+  const sSupp=clamp(0.5*a.csat+0.3*clamp(100-a.tickets*12)+0.2*clamp(100-a.critTickets*40));
+  const sCom=clamp((a.pay==='ok'?60:20)+(a.mrrNow>=a.mrrStart?40:(a.mrrNow>=a.mrrStart*0.85?20:0)));
+  const sSent=clamp((a.nps+100)/2);
+  const health=Math.round(0.35*sAdocao+0.20*sRelac+0.20*sSupp+0.15*sCom+0.10*sSent);
+  let churn=(1-seatUtil)*25+(a.loginFreq<40?15:(a.loginFreq<60?7:0))+(a.champion?0:18)+(a.contacts<=1?10:0)+clamp(a.lastContact/4,0,18)+a.critTickets*8+(a.mrrNow<a.mrrStart?12:0)+(a.pay==='late'?10:0)+(a.nps<0?8:0);
+  churn=Math.round(clamp(churn));
+  const renewalDays=a.renewalDays||0;
+  let farol='verde';
+  if(health>=45&&health<70)farol='amarelo';
+  if(churn>=45&&churn<65&&farol==='verde')farol='amarelo';
+  if(health<45||churn>=65||(renewalDays<=60&&renewalDays>0&&health<60&&a.mrrNow>0))farol='vermelho';
+  if(a.mrrNow===0)farol='vermelho';
+  const upgrade=a.mrrNow>0&&(seatUtil>=0.85||(health>=75&&a.nps>=8&&a.mrrNow>=a.mrrStart&&seatUtil>=0.70));
+  const upliftSeats=Math.max(0,Math.round((Math.min(1,seatUtil+0.25)*a.seatsEnt-a.seatsAct)));
+  const expansionPot=upgrade?Math.round(a.mrrNow*0.25):0;
+  return {...a,seatUtil,health,churn,renewalDays,farol,upgrade,expansionPot,upliftSeats};
+}
+
+let DATA_ROWS=[], DATA=[],ACTIVE=[],AGG={},sortKey='health',sortDir=-1;
+const charts={};
+
+async function checkAuth(){
+  const res = await fetch('/api/me');
+  const user = await res.json();
+  if(!user) window.location.href = '/login';
+  document.getElementById('user-name').textContent = user.username;
+  if(user.role !== 'admin') document.querySelector('button[data-tab="admin"]').style.display = 'none';
+}
+
+async function logout(){
+  await fetch('/api/logout', {method:'POST'});
+  window.location.href = '/login';
+}
+
+async function loadData(){
+  const res=await fetch('/api/accounts');
+  if(res.status===401) return logout();
+  DATA_ROWS=await res.json();
+  rebuild(DATA_ROWS);
+}
+
+async function saveData(){
+  await fetch('/api/accounts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(DATA_ROWS)});
+}
+
+function rebuild(rawRows){
+  DATA=rawRows.map(rowToObj).map(enrich);
+  ACTIVE=DATA.filter(d=>d.mrrNow>0);
+  const startMRR=DATA.reduce((s,d)=>s+d.mrrStart,0)||1;
+  const nowCohort=DATA.reduce((s,d)=>s+d.mrrNow,0);
+  AGG={
+    nrr:nowCohort/startMRR*100,
+    grr:DATA.reduce((s,d)=>s+Math.min(d.mrrNow,d.mrrStart),0)/startMRR*100,
+    expansionMRR:DATA.reduce((s,d)=>s+(d.mrrNow>0?Math.max(0,d.mrrNow-d.mrrStart):0),0),
+    nowCohort,startMRR,
+    arrTotal:ACTIVE.reduce((s,d)=>s+d.mrrNow,0)*12,
+    atRiskARR:ACTIVE.filter(d=>d.farol==='vermelho').reduce((s,d)=>s+d.mrrNow,0)*12,
+    avgHealth:ACTIVE.length?Math.round(ACTIVE.reduce((s,d)=>s+d.health,0)/ACTIVE.length):0,
+    verde:ACTIVE.filter(d=>d.farol==='verde').length,
+    amarelo:ACTIVE.filter(d=>d.farol==='amarelo').length,
+    vermelho:ACTIVE.filter(d=>d.farol==='vermelho').length,
+    upgradeCount:ACTIVE.filter(d=>d.upgrade).length,
+    upgradePot:ACTIVE.reduce((s,d)=>s+d.expansionPot,0),
+  };
+  renderKPIs();renderCharts();renderTable();renderJourney();renderAlerts();
+}
+
+function renderKPIs(){
+  const k=(label,val,hint,cls)=>`<div class="kpi ${cls||''}"><div class="label">${label}</div><div class="val">${val}</div><div class="hint">${hint}</div></div>`;
+  document.getElementById('kpi-row').innerHTML=
+    k('NRR','<span style="color:'+(AGG.nrr>=100?'var(--green-mid)':'var(--red)')+'">'+AGG.nrr.toFixed(0)+'%</span>','Net Revenue Retention','key')+
+    k('GRR',AGG.grr.toFixed(0)+'%','Retenção bruta','')+
+    k('ARR ativo',fmtK(AGG.arrTotal),ACTIVE.length+' contas ativas','good')+
+    k('ARR em risco','<span style="color:var(--red)">'+fmtK(AGG.atRiskARR)+'</span>',AGG.vermelho+' em vermelho','bad')+
+    k('Health médio',AGG.avgHealth,'carteira ativa',AGG.avgHealth>=70?'good':AGG.avgHealth>=55?'warn':'bad')+
+    k('Expansão potencial',fmtK(AGG.upgradePot*12),AGG.upgradeCount+' contas','good');
+}
+
+function renderCharts(){
+  Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}});
+  Chart.defaults.font.family="'Poppins',sans-serif";Chart.defaults.color=cssv('--brown');
+  charts.farol=new Chart(document.getElementById('farolChart'),{type:'doughnut',
+    data:{labels:['Saudável','Atenção','Risco'],datasets:[{data:[AGG.verde,AGG.amarelo,AGG.vermelho],backgroundColor:[cssv('--green-mid'),cssv('--amber'),cssv('--red')]}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+  charts.ret=new Chart(document.getElementById('retentionChart'),{type:'bar',
+    data:{labels:['MRR inicial','Expansão','Contração+Churn','MRR atual'],datasets:[{data:[AGG.startMRR,AGG.expansionMRR,-(AGG.startMRR+AGG.expansionMRR-AGG.nowCohort),AGG.nowCohort],backgroundColor:[cssv('--teal'),cssv('--green-mid'),cssv('--red'),cssv('--orange')]}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>fmtK(v)}}}}});
+}
+
+function renderTable(){
+  const t=document.getElementById('portfolioTable');
+  const itemsWithIdx = DATA.map((d,i) => ({...d, _origIdx: i}));
+  const sorted=itemsWithIdx.filter(d=>d.mrrNow>0).sort((a,b)=>{let x=a[sortKey],y=b[sortKey];return typeof x==='string'?x.localeCompare(y)*sortDir:(x-y)*sortDir;});
+  let h='<thead><tr><th>Conta</th><th>CSM</th><th class="num">MRR</th><th class="num">Health</th><th>Farol</th><th>Jornada</th><th>Ações</th></tr></thead><tbody>';
+  sorted.forEach(d=>{
+    const fcls={verde:'v',amarelo:'a',vermelho:'r'}[d.farol],flabel={verde:'Saudável',amarelo:'Atenção',vermelho:'Risco'}[d.farol];
+    const hcol=d.health>=70?'var(--green-mid)':d.health>=50?'var(--amber)':'var(--red)';
+    h+=`<tr><td><b>${esc(d.name)}</b></td><td>${esc(d.csm)}</td><td class="num">${fmtBRL(d.mrrNow)}</td><td class="num" style="font-weight:700;color:${hcol}">${d.health}</td><td><span class="pill ${fcls}">${flabel}</span></td><td>${esc(d.stage)}</td>
+    <td><button class="btn sm" onclick="editAccount(${d._origIdx})">Editar</button> <button class="btn sm danger" onclick="deleteAccount(${d._origIdx})">Excluir</button></td></tr>`;
+  });
+  t.innerHTML=h+'</tbody>';
+}
+
+function renderJourney(){
+  const stages=['Onboarding','Adoção','Engajamento','Expansão','Renovação','Advocacia'];
+  document.getElementById('journeyBoard').innerHTML=stages.map(s=>{
+    const list=ACTIVE.filter(d=>d.stage===s);
+    const items=list.map(d=>`<div class="acct"><span><span class="farol f-${d.farol}"></span>${esc(d.name)}</span><span>${fmtK(d.mrrNow*12)}</span></div>`).join('')||'<div class="acct">—</div>';
+    return `<div class="stage"><h4>${s}</h4><div class="cnt">${list.length}</div>${items}</div>`;
+  }).join('');
+}
+
+function renderAlerts(){
+  const reasons=d=>{const r=[]; if(d.seatUtil<0.5)r.push('baixa adoção'); if(d.loginFreq<40)r.push('uso baixo'); if(!d.champion)r.push('sem champion'); return r;};
+  const churnList=ACTIVE.filter(d=>d.farol==='vermelho'||d.churn>=45).sort((a,b)=>b.churn-a.churn);
+  document.getElementById('churnAlerts').innerHTML=churnList.map(d=>`<div class="alert"><div class="top"><span class="acct-name">${esc(d.name)}</span><span class="pill r">${d.churn}</span></div><div class="why">${reasons(d).join(' · ')}</div></div>`).join('')||'<div class="panel">Nenhum risco.</div>';
+}
+
+/* Modal */
+function openModal(idx=null){
+  document.getElementById('modalOvl').classList.add('active');
+  document.getElementById('accountForm').reset();
+  document.getElementById('f-index').value = idx!==null?idx:'';
+  if(idx!==null){
+    const d = DATA[idx];
+    document.getElementById('f-name').value = d.name;
+    document.getElementById('f-csm').value = d.csm;
+    document.getElementById('f-mrrNow').value = d.mrrNow;
+    document.getElementById('f-stage').value = d.stage;
+  }
+}
+function closeModal(){document.getElementById('modalOvl').classList.remove('active');}
+
+document.getElementById('accountForm').onsubmit=async(e)=>{
+  e.preventDefault();
+  const idx = document.getElementById('f-index').value;
+  const o = {
+    name: document.getElementById('f-name').value,
+    csm: document.getElementById('f-csm').value,
+    plan: document.getElementById('f-plan').value,
+    mrrStart: parseFloat(document.getElementById('f-mrrStart').value)||0,
+    mrrNow: parseFloat(document.getElementById('f-mrrNow').value)||0,
+    seatsEnt: parseInt(document.getElementById('f-seatsEnt').value)||0,
+    seatsAct: parseInt(document.getElementById('f-seatsAct').value)||0,
+    loginFreq: parseInt(document.getElementById('f-loginFreq').value)||0,
+    lastContact: parseInt(document.getElementById('f-lastContact').value)||0,
+    champion: document.getElementById('f-champion').value === 'Sim',
+    contacts: parseInt(document.getElementById('f-contacts').value)||0,
+    tickets: parseInt(document.getElementById('f-tickets').value)||0,
+    critTickets: parseInt(document.getElementById('f-critTickets').value)||0,
+    csat: parseInt(document.getElementById('f-csat').value)||0,
+    nps: parseInt(document.getElementById('f-nps').value)||0,
+    pay: document.getElementById('f-pay').value === 'Atrasado' ? 'late' : 'ok',
+    stage: document.getElementById('f-stage').value,
+    renewalDays: parseInt(document.getElementById('f-renewalDays').value)||365
+  };
+  const row = objToRow(o);
+  if(idx==='') DATA_ROWS.push(row); else DATA_ROWS[idx] = row;
+  await saveData(); loadData(); closeModal();
+};
+
+function editAccount(idx){ openModal(idx); }
+function deleteAccount(idx){ if(confirm('Excluir conta?')){ DATA_ROWS.splice(idx,1); saveData().then(loadData); } }
+
+document.getElementById('pwForm').onsubmit=async(e)=>{
+  e.preventDefault();
+  const newPassword = document.getElementById('new-pw').value;
+  const res = await fetch('/api/admin/change-password', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({newPassword})
+  });
+  if(res.ok) alert('Senha atualizada!');
+};
+
+function exportCSV(){
+  let csv = COLS.join(',') + '\n';
+  DATA_ROWS.forEach(r => csv += r.map(v => typeof v==='string' && v.includes(',') ? `"${v}"` : v).join(',') + '\n');
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  link.setAttribute("download", "cs_data.csv");
+  link.click();
+}
+
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');document.getElementById(b.dataset.tab).classList.add('active');
+});
+
+checkAuth().then(loadData);
+</script>
+</body>
+</html>
