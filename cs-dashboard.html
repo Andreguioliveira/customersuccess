@@ -181,7 +181,8 @@
 const SUPABASE_URL = "https://laywwovrscbinipppjfw.supabase.co"; 
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxheXd3b3Zyc2NiaW5pcHBwamZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwOTAzMTUsImV4cCI6MjA5ODY2NjMxNX0.zGub-fupurm5MuoKedqr7_lw0oEeqc7flzMeawAkknk";
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Mudança estratégica de nome para evitar conflitos globais da biblioteca
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function esc(str){
   if(!str) return '';
@@ -229,7 +230,7 @@ function logout(){
 
 async function loadData(){
   try {
-    const { data, error } = await supabase.from('accounts').select('*');
+    const { data, error } = await supabaseClient.from('accounts').select('*');
     if(error) throw error;
     rebuild(data || []);
   } catch (err) {
@@ -380,9 +381,9 @@ document.getElementById('accountForm').onsubmit=async(e)=>{
   };
 
   if(id === '') {
-    await supabase.from('accounts').insert([o]);
+    await supabaseClient.from('accounts').insert([o]);
   } else {
-    await supabase.from('accounts').update(o).eq('id', id);
+    await supabaseClient.from('accounts').update(o).eq('id', id);
   }
   loadData(); closeModal();
 };
@@ -391,7 +392,7 @@ function editAccount(id){ openModal(id); }
 
 async function deleteAccount(id){ 
   if(confirm('Excluir conta definitivamente?')){ 
-    await supabase.from('accounts').delete().eq('id', id);
+    await supabaseClient.from('accounts').delete().eq('id', id);
     loadData();
   } 
 }
@@ -438,7 +439,7 @@ document.getElementById('csvInput').onchange = function(e) {
       });
     }
     if(importedAccounts.length > 0) {
-      await supabase.from('accounts').insert(importedAccounts);
+      await supabaseClient.from('accounts').insert(importedAccounts);
       loadData();
       alert('Importação concluída com sucesso!');
     }
@@ -454,7 +455,7 @@ document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
   if(targetSection) targetSection.classList.add('active');
 });
 
-// Inicialização Limpa e Direta no Front-end
+// Inicialização Limpa e Corrigida
 loadData();
 </script>
 </body>
