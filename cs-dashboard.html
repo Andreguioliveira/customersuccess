@@ -178,9 +178,6 @@
 </div>
 
 <script>
-// ==========================================
-// CONFIGURAÇÃO DO CONFIGURAÇÃO DO SUPABASE
-// ==========================================
 const SUPABASE_URL = "https://laywwovrscbinipppjfw.supabase.co"; 
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxheXd3b3Zyc2NiaW5pcHBwamZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwOTAzMTUsImV4cCI6MjA5ODY2NjMxNX0.zGub-fupurm5MuoKedqr7_lw0oEeqc7flzMeawAkknk";
 
@@ -230,14 +227,15 @@ function logout(){
   window.location.href = 'index.html';
 }
 
-// BUSCAR CONTAS DO SUPABASE
 async function loadData(){
-  const { data, error } = await supabase.from('accounts').select('*');
-  if(error) {
-    console.error("Erro ao carregar dados do Supabase:", error);
-    return;
+  try {
+    const { data, error } = await supabase.from('accounts').select('*');
+    if(error) throw error;
+    rebuild(data || []);
+  } catch (err) {
+    console.error("Erro Supabase:", err);
+    rebuild([]);
   }
-  rebuild(data || []);
 }
 
 function rebuild(rawItems){
@@ -264,7 +262,9 @@ function rebuild(rawItems){
 
 function renderKPIs(){
   const k=(label,val,hint,cls)=>`<div class="kpi ${cls||''}"><div class="label">${label}</div><div class="val">${val}</div><div class="hint">${hint}</div></div>`;
-  document.getElementById('kpi-row').innerHTML=
+  const rowElement = document.getElementById('kpi-row');
+  if(!rowElement) return;
+  rowElement.innerHTML=
     k('NRR','<span style="color:'+(AGG.nrr>=100?'var(--green-mid)':'var(--red)')+'">'+AGG.nrr.toFixed(0)+'%</span>','Net Revenue Retention','key')+
     k('GRR',AGG.grr.toFixed(0)+'%','Retenção bruta','')+
     k('ARR ativo',fmtK(AGG.arrTotal),ACTIVE.length+' contas ativas','good')+
@@ -276,16 +276,25 @@ function renderKPIs(){
 function renderCharts(){
   Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}});
   Chart.defaults.font.family="'Poppins',sans-serif";Chart.defaults.color=cssv('--brown');
-  charts.farol=new Chart(document.getElementById('farolChart'),{type:'doughnut',
-    data:{labels:['Saudável','Atenção','Risco'],datasets:[{data:[AGG.verde,AGG.amarelo,AGG.vermelho],backgroundColor:[cssv('--green-mid'),cssv('--amber'),cssv('--red')]}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
-  charts.ret=new Chart(document.getElementById('retentionChart'),{type:'bar',
-    data:{labels:['MRR inicial','Expansão','Contração+Churn','MRR atual'],datasets:[{data:[AGG.startMRR,AGG.expansionMRR,-(AGG.startMRR+AGG.expansionMRR-AGG.nowCohort),AGG.nowCohort],backgroundColor:[cssv('--teal'),cssv('--green-mid'),cssv('--red'),cssv('--orange')]}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>fmtK(v)}}}}});
+  
+  const farolCtx = document.getElementById('farolChart');
+  if (farolCtx) {
+    charts.farol=new Chart(farolCtx,{type:'doughnut',
+      data:{labels:['Saudável','Atenção','Risco'],datasets:[{data:[AGG.verde,AGG.amarelo,AGG.vermelho],backgroundColor:[cssv('--green-mid'),cssv('--amber'),cssv('--red')]}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+  }
+  
+  const retentionCtx = document.getElementById('retentionChart');
+  if (retentionCtx) {
+    charts.ret=new Chart(retentionCtx,{type:'bar',
+      data:{labels:['MRR inicial','Expansão','Contração+Churn','MRR atual'],datasets:[{data:[AGG.startMRR,AGG.expansionMRR,-(AGG.startMRR+AGG.expansionMRR-AGG.nowCohort),AGG.nowCohort],backgroundColor:[cssv('--teal'),cssv('--green-mid'),cssv('--red'),cssv('--orange')]}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>fmtK(v)}}}}});
+  }
 }
 
 function renderTable(){
   const t=document.getElementById('portfolioTable');
+  if(!t) return;
   const sorted=DATA.filter(d=>d.mrrNow>0).sort((a,b)=>{let x=a[sortKey],y=b[sortKey];return typeof x==='string'?x.localeCompare(y)*sortDir:(x-y)*sortDir;});
   let h='<thead><tr><th>Conta</th><th>CSM</th><th class="num">MRR</th><th class="num">Health</th><th>Farol</th><th>Jornada</th><th>Ações</th></tr></thead><tbody>';
   sorted.forEach(d=>{
@@ -297,10 +306,11 @@ function renderTable(){
   t.innerHTML=h+'</tbody>';
 }
 
-// JORNADAS DOS CLIENTES
 function renderJourney(){
+  const board = document.getElementById('journeyBoard');
+  if(!board) return;
   const stages=['Onboarding','Adoção','Engajamento','Expansão','Renovação','Advocacia'];
-  document.getElementById('journeyBoard').innerHTML=stages.map(s=>{
+  board.innerHTML=stages.map(s=>{
     const list=ACTIVE.filter(d=>d.stage===s);
     const items=list.map(d=>`<div class="acct"><span><span class="farol f-${d.farol}"></span>${esc(d.name)}</span><span>${fmtK(d.mrrNow*12)}</span></div>`).join('')||'<div class="acct">—</div>';
     return `<div class="stage"><h4>${s}</h4><div class="cnt">${list.length}</div>${items}</div>`;
@@ -308,12 +318,13 @@ function renderJourney(){
 }
 
 function renderAlerts(){
+  const churnAlerts = document.getElementById('churnAlerts');
+  if(!churnAlerts) return;
   const reasons=d=>{const r=[]; if(d.seatUtil<0.5)r.push('baixa adoção'); if(d.loginFreq<40)r.push('uso baixo'); if(!d.champion)r.push('sem champion'); return r;};
   const churnList=ACTIVE.filter(d=>d.farol==='vermelho'||d.churn>=45).sort((a,b)=>b.churn-a.churn);
-  document.getElementById('churnAlerts').innerHTML=churnList.map(d=>`<div class="alert"><div class="top"><span class="acct-name">${esc(d.name)}</span><span class="pill r">${d.churn}</span></div><div class="why">${reasons(d).join(' · ')}</div></div>`).join('')||'<div class="panel">Nenhum risco.</div>';
+  churnAlerts.innerHTML=churnList.map(d=>`<div class="alert"><div class="top"><span class="acct-name">${esc(d.name)}</span><span class="pill r">${d.churn}</span></div><div class="why">${reasons(d).join(' · ')}</div></div>`).join('')||'<div class="panel">Nenhum risco.</div>';
 }
 
-/* Modal */
 function openModal(id=null){
   document.getElementById('modalOvl').classList.add('active');
   document.getElementById('accountForm').reset();
@@ -344,7 +355,6 @@ function openModal(id=null){
 }
 function closeModal(){document.getElementById('modalOvl').classList.remove('active');}
 
-// SALVAR/ATUALIZAR CONTA NO SUPABASE
 document.getElementById('accountForm').onsubmit=async(e)=>{
   e.preventDefault();
   const id = document.getElementById('f-id').value;
@@ -370,10 +380,8 @@ document.getElementById('accountForm').onsubmit=async(e)=>{
   };
 
   if(id === '') {
-    // Inserir Nova Conta
     await supabase.from('accounts').insert([o]);
   } else {
-    // Atualizar Conta Existente
     await supabase.from('accounts').update(o).eq('id', id);
   }
   loadData(); closeModal();
@@ -382,13 +390,12 @@ document.getElementById('accountForm').onsubmit=async(e)=>{
 function editAccount(id){ openModal(id); }
 
 async function deleteAccount(id){ 
-  if(confirm('Excluir conta definitivamente do banco de dados?')){ 
+  if(confirm('Excluir conta definitivamente?')){ 
     await supabase.from('accounts').delete().eq('id', id);
     loadData();
   } 
 }
 
-// EXPORTAR DADOS EM CSV
 function exportCSV(){
   let csv = COLS.join(',') + '\n';
   DATA.forEach(d => {
@@ -397,22 +404,18 @@ function exportCSV(){
   });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-  link.setAttribute("download", "cs_data_supabase.csv");
+  link.setAttribute("download", "cs_data.csv");
   link.click();
 }
 
-// IMPORTAR PLANILHA CSV DIRETAMENTE PARA O SUPABASE
 document.getElementById('csvInput').onchange = function(e) {
   const reader = new FileReader();
   reader.onload = async function() {
     const lines = reader.result.split('\n');
     const importedAccounts = [];
-    
-    // Ignora o cabeçalho e lê as linhas
     for(let i = 1; i < lines.length; i++) {
       if(!lines[i].trim()) continue;
       const values = lines[i].split(',');
-      
       importedAccounts.push({
         name: values[0]?.replace(/"/g, ''),
         csm: values[1],
@@ -434,9 +437,7 @@ document.getElementById('csvInput').onchange = function(e) {
         renewalDays: parseInt(values[17]) || 365
       });
     }
-    
     if(importedAccounts.length > 0) {
-      alert(`Processando a importação de ${importedAccounts.length} contas para o Supabase...`);
       await supabase.from('accounts').insert(importedAccounts);
       loadData();
       alert('Importação concluída com sucesso!');
@@ -448,10 +449,12 @@ document.getElementById('csvInput').onchange = function(e) {
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active');document.getElementById(b.dataset.tab).classList.add('active');
+  b.classList.add('active');
+  const targetSection = document.getElementById(b.dataset.tab);
+  if(targetSection) targetSection.classList.add('active');
 });
 
-// Inicialização Automatizada
+// Inicialização Limpa e Direta no Front-end
 loadData();
 </script>
 </body>
