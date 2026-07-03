@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Customer Success — Refuturiza 360</title>
-<!-- Scripts Oficiais: Chart.js e Supabase Client -->
+<!-- Scripts Oficiais do Chart.js e Supabase Client -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -92,7 +92,7 @@
     <div class="tagline">Customer Success · Emprego e Educação para Todos</div>
   </div>
   <div class="hdr-right">
-    <div class="hdr-meta">Olá, <span id="user-name">Admin</span><br><span id="hdr-date"></span></div>
+    <div class="hdr-meta">Olá, <span id="user-name">...</span> <span id="user-role" class="tag" style="background:var(--orange);color:#fff"></span><br><span id="hdr-date"></span></div>
     <button class="btn ghost sm" style="color:#fff;border-color:rgba(255,255,255,0.3)" onclick="logout()">Sair</button>
   </div>
 </header>
@@ -102,11 +102,12 @@
   <button data-tab="portfolio">Carteira</button>
   <button data-tab="journey">Jornadas</button>
   <button data-tab="alerts">Alertas</button>
+  <button data-tab="admin">Administração</button>
 </nav>
 
 <main>
   <div class="databar" id="databar">
-    <span>✅ <b>Nuvem Ativa (Supabase Pro).</b> Gerencie sua carteira de clientes em tempo real.</span>
+    <span>✅ <b>Sessão Ativa:</b> Modo <span id="mode-text">Restrito</span>.</span>
     <button class="btn" onclick="openModal()">+ Adicionar Conta</button>
     <button class="btn ghost" onclick="exportCSV()">Exportar CSV</button>
     <input type="file" id="csvInput" accept=".csv" style="display:none">
@@ -140,6 +141,20 @@
       <div><h3 style="color:var(--green-mid);margin-bottom:10px">📈 Oportunidades de upgrade</h3><div id="upgradeAlerts"></div></div>
     </div>
   </section>
+
+  <section class="tab" id="admin">
+    <div class="sec-title">Configurações do Portal</div>
+    <div class="panel" style="max-width:400px">
+      <h3>Alterar Senha</h3>
+      <form id="pwForm">
+        <div class="f-group" style="margin-bottom:12px">
+          <label>Nova Senha</label>
+          <input type="password" id="new-pw" required minlength="6">
+        </div>
+        <button type="submit" class="btn">Atualizar Senha</button>
+      </form>
+    </div>
+  </section>
 </main>
 
 <div class="modal-ovl" id="modalOvl">
@@ -149,7 +164,7 @@
       <input type="hidden" id="f-id">
       <div class="form-grid">
         <div class="f-group"><label>Nome da Conta</label><input type="text" id="f-name" required></div>
-        <div class="f-group"><label>CSM Responsável</label><input type="text" id="f-csm" required></div>
+        <div class="f-group"><label>Nome do CSM</label><input type="text" id="f-csm" required></div>
         <div class="f-group"><label>Plano</label><select id="f-plan"><option>Enterprise</option><option>Growth</option><option>Starter</option></select></div>
         <div class="f-group"><label>MRR Inicial</label><input type="number" id="f-mrrStart" value="0"></div>
         <div class="f-group"><label>MRR Atual</label><input type="number" id="f-mrrNow" value="0"></div>
@@ -178,9 +193,9 @@
 </div>
 
 <script>
-const SUPABASE_URL = "https://laywwovrscbinipppjfw.supabase.co"; 
+/* Configuração do Cliente Supabase */
+const SUPABASE_URL = "https://laywwovrscbinipppjfw.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxheXd3b3Zyc2NiaW5pcHBwamZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwOTAzMTUsImV4cCI6MjA5ODY2NjMxNX0.zGub-fupurm5MuoKedqr7_lw0oEeqc7flzMeawAkknk";
-
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function esc(str){
@@ -197,74 +212,104 @@ const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).tri
 document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
 
 const COLS=["name","csm","plan","mrrStart","mrrNow","seatsEnt","seatsAct","loginFreq","lastContact","champion","contacts","tickets","critTickets","csat","nps","pay","stage","renewalDays"];
+const ADMINS = ['andre.oliveira@refuturiza.com.br', 'lizi.rodrigues@refuturiza.com.br'];
 
-function enrich(a){
-  const seatUtil=a.seatsEnt?a.seatsAct/a.seatsEnt:0;
-  const sAdocao=clamp(0.6*(seatUtil*100)+0.4*a.loginFreq);
-  const sRelac=clamp((a.champion?45:0)+clamp(a.contacts*10,0,30)+clamp(25-(a.lastContact/3),0,25));
-  const sSupp=clamp(0.5*a.csat+0.3*clamp(100-a.tickets*12)+0.2*clamp(100-a.critTickets*40));
-  const sCom=clamp((a.pay==='ok'?60:20)+(a.mrrNow>=a.mrrStart?40:(a.mrrNow>=a.mrrStart*0.85?20:0)));
-  const sSent=clamp((a.nps+100)/2);
-  const health=Math.round(0.35*sAdocao+0.20*sRelac+0.20*sSupp+0.15*sCom+0.10*sSent);
-  let churn=(1-seatUtil)*25+(a.loginFreq<40?15:(a.loginFreq<60?7:0))+(a.champion?0:18)+(a.contacts<=1?10:0)+clamp(a.lastContact/4,0,18)+a.critTickets*8+(a.mrrNow<a.mrrStart?12:0)+(a.pay==='late'?10:0)+(a.nps<0?8:0);
-  churn=Math.round(clamp(churn));
-  const renewalDays=a.renewalDays||0;
-  let farol='verde';
-  if(health>=45&&health<70)farol='amarelo';
-  if(churn>=45&&churn<65&&farol==='verde')farol='amarelo';
-  if(health<45||churn>=65||(renewalDays<=60&&renewalDays>0&&health<60&&a.mrrNow>0))farol='vermelho';
-  if(a.mrrNow===0)farol='vermelho';
-  const upgrade=a.mrrNow>0&&(seatUtil>=0.85||(health>=75&&a.nps>=8&&a.mrrNow>=a.mrrStart&&seatUtil>=0.70));
-  const upliftSeats=Math.max(0,Math.round((Math.min(1,seatUtil+0.25)*a.seatsEnt-a.seatsAct)));
-  const expansionPot=upgrade?Math.round(a.mrrNow*0.25):0;
-  return {...a,seatUtil,health,churn,renewalDays,farol,upgrade,expansionPot,upliftSeats};
+let currentUser = null;
+let isAdmin = false;
+let DATA = [], ACTIVE = [], AGG = {}, sortKey = 'health', sortDir = -1;
+const charts = {};
+
+/* Validação de Sessão Segura e Nível de Acesso */
+async function checkAuth(){
+  const { data: { session }, error } = await supabaseClient.auth.getSession();
+  if (error || !session) {
+    window.location.href = 'index.html';
+    return;
+  }
+  
+  currentUser = session.user;
+  isAdmin = ADMINS.includes(currentUser.email.toLowerCase());
+  
+  document.getElementById('user-name').textContent = currentUser.email.split('@')[0];
+  document.getElementById('user-role').textContent = isAdmin ? 'Admin' : 'CSM';
+  document.getElementById('mode-text').textContent = isAdmin ? 'Visão Master' : 'Sua Carteira';
 }
 
-let DATA=[],ACTIVE=[],AGG={},sortKey='health',sortDir=-1;
-const charts={};
-
-function logout(){
+async function logout(){
+  await supabaseClient.auth.signOut();
   window.location.href = 'index.html';
 }
 
+/* Busca Dinâmica de Dados filtrada no Banco */
 async function loadData(){
   try {
-    const { data, error } = await supabaseClient.from('accounts').select('*');
-    if(error) throw error;
-    rebuild(data || []);
+    let query = supabaseClient.from('accounts').select('*');
+    
+    // Se NÃO for administrador, aplica a trava de segurança direto no banco pelo ID logado
+    if (!isAdmin) {
+      query = query.eq('csm_id', currentUser.id);
+    }
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    
+    rebuild(data);
   } catch (err) {
-    console.error("Erro Supabase:", err);
-    rebuild([]);
+    console.error("Erro ao ler contas:", err.message);
   }
 }
 
-function rebuild(rawItems){
-  DATA=rawItems.map(enrich);
-  ACTIVE=DATA.filter(d=>d.mrrNow>0);
-  const startMRR=DATA.reduce((s,d)=>s+d.mrrStart,0)||1;
-  const nowCohort=DATA.reduce((s,d)=>s+d.mrrNow,0);
-  AGG={
-    nrr:nowCohort/startMRR*100,
-    grr:DATA.reduce((s,d)=>s+Math.min(d.mrrNow,d.mrrStart),0)/startMRR*100,
-    expansionMRR:DATA.reduce((s,d)=>s+(d.mrrNow>0?Math.max(0,d.mrrNow-d.mrrStart):0),0),
-    nowCohort,startMRR,
-    arrTotal:ACTIVE.reduce((s,d)=>s+d.mrrNow,0)*12,
-    atRiskARR:ACTIVE.filter(d=>d.farol==='vermelho').reduce((s,d)=>s+d.mrrNow,0)*12,
-    avgHealth:ACTIVE.length?Math.round(ACTIVE.reduce((s,d)=>s+d.health,0)/ACTIVE.length):0,
-    verde:ACTIVE.filter(d=>d.farol==='verde').length,
-    amarelo:ACTIVE.filter(d=>d.farol==='amarelo').length,
-    vermelho:ACTIVE.filter(d=>d.farol==='vermelho').length,
-    upgradeCount:ACTIVE.filter(d=>d.upgrade).length,
-    upgradePot:ACTIVE.reduce((s,d)=>s+d.expansionPot,0),
+function enrich(a){
+  const seatUtil = a.seatsEnt ? a.seatsAct / a.seatsEnt : 0;
+  const sAdocao = clamp(0.6 * (seatUtil * 100) + 0.4 * a.loginFreq);
+  const sRelac = clamp((a.champion ? 45 : 0) + clamp(a.contacts * 10, 0, 30) + clamp(25 - (a.lastContact / 3), 0, 25));
+  const sSupp = clamp(0.5 * a.csat + 0.3 * clamp(100 - a.tickets * 12) + 0.2 * clamp(100 - a.critTickets * 40));
+  const sCom = clamp((a.pay === 'ok' ? 60 : 20) + (a.mrrNow >= a.mrrStart ? 40 : (a.mrrNow >= a.mrrStart * 0.85 ? 20 : 0)));
+  const sSent = clamp((a.nps + 100) / 2);
+  
+  const health = Math.round(0.35 * sAdocao + 0.20 * sRelac + 0.20 * sSupp + 0.15 * sCom + 0.10 * sSent);
+  let churn = (1 - seatUtil) * 25 + (a.loginFreq < 40 ? 15 : (a.loginFreq < 60 ? 7 : 0)) + (a.champion ? 0 : 18) + (a.contacts <= 1 ? 10 : 0) + clamp(a.lastContact / 4, 0, 18) + a.critTickets * 8 + (a.mrrNow < a.mrrStart ? 12 : 0) + (a.pay === 'late' ? 10 : 0) + (a.nps < 0 ? 8 : 0);
+  churn = Math.round(clamp(churn));
+  
+  const renewalDays = a.renewalDays || 0;
+  let farol = 'verde';
+  if(health >= 45 && health < 70) farol = 'amarelo';
+  if(churn >= 45 && churn < 65 && farol === 'verde') farol = 'amarelo';
+  if(health < 45 || churn >= 65 || (renewalDays <= 60 && renewalDays > 0 && health < 60 && a.mrrNow > 0)) farol = 'vermelho';
+  if(a.mrrNow === 0) farol = 'vermelho';
+  
+  const upgrade = a.mrrNow > 0 && (seatUtil >= 0.85 || (health >= 75 && a.nps >= 8 && a.mrrNow >= a.mrrStart && seatUtil >= 0.70));
+  const expansionPot = upgrade ? Math.round(a.mrrNow * 0.25) : 0;
+  
+  return { ...a, seatUtil, health, churn, renewalDays, farol, upgrade, expansionPot };
+}
+
+function rebuild(rows){
+  DATA = rows.map(enrich);
+  ACTIVE = DATA.filter(d => d.mrrNow > 0);
+  const startMRR = DATA.reduce((s,d) => s + d.mrrStart, 0) || 1;
+  const nowCohort = DATA.reduce((s,d) => s + d.mrrNow, 0);
+  
+  AGG = {
+    nrr: (nowCohort / startMRR) * 100,
+    grr: DATA.reduce((s,d) => s + Math.min(d.mrrNow, d.mrrStart), 0) / startMRR * 100,
+    expansionMRR: DATA.reduce((s,d) => s + (d.mrrNow > 0 ? Math.max(0, d.mrrNow - d.mrrStart) : 0), 0),
+    nowCohort, startMRR,
+    arrTotal: ACTIVE.reduce((s,d) => s + d.mrrNow, 0) * 12,
+    atRiskARR: ACTIVE.filter(d => d.farol === 'vermelho').reduce((s,d) => s + d.mrrNow, 0) * 12,
+    avgHealth: ACTIVE.length ? Math.round(ACTIVE.reduce((s,d) => s + d.health, 0) / ACTIVE.length) : 0,
+    verde: ACTIVE.filter(d => d.farol === 'verde').length,
+    amarelo: ACTIVE.filter(d => d.farol === 'amarelo').length,
+    vermelho: ACTIVE.filter(d => d.farol === 'vermelho').length,
+    upgradeCount: ACTIVE.filter(d => d.upgrade).length,
+    upgradePot: ACTIVE.reduce((s,d) => s + d.expansionPot, 0),
   };
-  renderKPIs();renderCharts();renderTable();renderJourney();renderAlerts();
+  renderKPIs(); renderCharts(); renderTable(); renderJourney(); renderAlerts();
 }
 
 function renderKPIs(){
-  const k=(label,val,hint,cls)=>`<div class="kpi ${cls||''}"><div class="label">${label}</div><div class="val">${val}</div><div class="hint">${hint}</div></div>`;
-  const rowElement = document.getElementById('kpi-row');
-  if(!rowElement) return;
-  rowElement.innerHTML=
+  const k = (label,val,hint,cls) => `<div class="kpi ${cls||''}"><div class="label">${label}</div><div class="val">${val}</div><div class="hint">${hint}</div></div>`;
+  document.getElementById('kpi-row').innerHTML =
     k('NRR','<span style="color:'+(AGG.nrr>=100?'var(--green-mid)':'var(--red)')+'">'+AGG.nrr.toFixed(0)+'%</span>','Net Revenue Retention','key')+
     k('GRR',AGG.grr.toFixed(0)+'%','Retenção bruta','')+
     k('ARR ativo',fmtK(AGG.arrTotal),ACTIVE.length+' contas ativas','good')+
@@ -274,90 +319,78 @@ function renderKPIs(){
 }
 
 function renderCharts(){
-  Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}});
-  Chart.defaults.font.family="'Poppins',sans-serif";Chart.defaults.color=cssv('--brown');
-  
-  const farolCtx = document.getElementById('farolChart');
-  if (farolCtx) {
-    charts.farol=new Chart(farolCtx,{type:'doughnut',
-      data:{labels:['Saudável','Atenção','Risco'],datasets:[{data:[AGG.verde,AGG.amarelo,AGG.vermelho],backgroundColor:[cssv('--green-mid'),cssv('--amber'),cssv('--red')]}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
-  }
-  
-  const retentionCtx = document.getElementById('retentionChart');
-  if (retentionCtx) {
-    charts.ret=new Chart(retentionCtx,{type:'bar',
-      data:{labels:['MRR inicial','Expansão','Contração+Churn','MRR atual'],datasets:[{data:[AGG.startMRR,AGG.expansionMRR,-(AGG.startMRR+AGG.expansionMRR-AGG.nowCohort),AGG.nowCohort],backgroundColor:[cssv('--teal'),cssv('--green-mid'),cssv('--red'),cssv('--orange')]}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>fmtK(v)}}}}});
-  }
+  Object.values(charts).forEach(c => { try{c.destroy()}catch(e){} });
+  Chart.defaults.font.family="'Poppins',sans-serif"; Chart.defaults.color=cssv('--brown');
+  charts.farol = new Chart(document.getElementById('farolChart'),{type:'doughnut',
+    data:{labels:['Saudável','Atenção','Risco'],datasets:[{data:[AGG.verde,AGG.amarelo,AGG.vermelho],backgroundColor:[cssv('--green-mid'),cssv('--amber'),cssv('--red')]}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+  charts.ret = new Chart(document.getElementById('retentionChart'),{type:'bar',
+    data:{labels:['MRR inicial','Expansão','Contração+Churn','MRR atual'],datasets:[{data:[AGG.startMRR,AGG.expansionMRR,-(AGG.startMRR+AGG.expansionMRR-AGG.nowCohort),AGG.nowCohort],backgroundColor:[cssv('--teal'),cssv('--green-mid'),cssv('--red'),cssv('--orange')]}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>fmtK(v)}}}}});
 }
 
 function renderTable(){
-  const t=document.getElementById('portfolioTable');
-  if(!t) return;
-  const sorted=DATA.filter(d=>d.mrrNow>0).sort((a,b)=>{let x=a[sortKey],y=b[sortKey];return typeof x==='string'?x.localeCompare(y)*sortDir:(x-y)*sortDir;});
-  let h='<thead><tr><th>Conta</th><th>CSM</th><th class="num">MRR</th><th class="num">Health</th><th>Farol</th><th>Jornada</th><th>Ações</th></tr></thead><tbody>';
-  sorted.forEach(d=>{
-    const fcls={verde:'v',amarelo:'a',vermelho:'r'}[d.farol],flabel={verde:'Saudável',amarelo:'Atenção',vermelho:'Risco'}[d.farol];
-    const hcol=d.health>=70?'var(--green-mid)':d.health>=50?'var(--amber)':'var(--red)';
-    h+=`<tr><td><b>${esc(d.name)}</b></td><td>${esc(d.csm)}</td><td class="num">${fmtBRL(d.mrrNow)}</td><td class="num" style="font-weight:700;color:${hcol}">${d.health}</td><td><span class="pill ${fcls}">${flabel}</span></td><td>${esc(d.stage)}</td>
+  const t = document.getElementById('portfolioTable');
+  const sorted = [...DATA].filter(d => d.mrrNow > 0).sort((a,b) => { let x=a[sortKey],y=b[sortKey]; return typeof x==='string'?x.localeCompare(y)*sortDir:(x-y)*sortDir; });
+  let h = '<thead><tr><th>Conta</th><th>CSM</th><th class="num">MRR</th><th class="num">Health</th><th>Farol</th><th>Jornada</th><th>Ações</th></tr></thead><tbody>';
+  sorted.forEach(d => {
+    const fcls = {verde:'v',amarelo:'a',vermelho:'r'}[d.farol], flabel={verde:'Saudável',amarelo:'Atenção',vermelho:'Risco'}[d.farol];
+    const hcol = d.health >= 70 ? 'var(--green-mid)' : d.health >= 50 ? 'var(--amber)' : 'var(--red)';
+    h += `<tr><td><b>${esc(d.name)}</b></td><td>${esc(d.csm)}</td><td class="num">${fmtBRL(d.mrrNow)}</td><td class="num" style="font-weight:700;color:${hcol}">${d.health}</td><td><span class="pill ${fcls}">${flabel}</span></td><td>${esc(d.stage)}</td>
     <td><button class="btn sm" onclick="editAccount('${d.id}')">Editar</button> <button class="btn sm danger" onclick="deleteAccount('${d.id}')">Excluir</button></td></tr>`;
   });
-  t.innerHTML=h+'</tbody>';
+  t.innerHTML = h + '</tbody>';
 }
 
 function renderJourney(){
-  const board = document.getElementById('journeyBoard');
-  if(!board) return;
-  const stages=['Onboarding','Adoção','Engajamento','Expansão','Renovação','Advocacia'];
-  board.innerHTML=stages.map(s=>{
-    const list=ACTIVE.filter(d=>d.stage===s);
-    const items=list.map(d=>`<div class="acct"><span><span class="farol f-${d.farol}"></span>${esc(d.name)}</span><span>${fmtK(d.mrrNow*12)}</span></div>`).join('')||'<div class="acct">—</div>';
+  const stages = ['Onboarding','Adoção','Engajamento','Expansão','Renovação','Advocacia'];
+  document.getElementById('journeyBoard').innerHTML = stages.map(s => {
+    const list = ACTIVE.filter(d => d.stage === s);
+    const items = list.map(d => `<div class="acct"><span><span class="farol f-${d.farol}"></span>${esc(d.name)}</span><span>${fmtK(d.mrrNow*12)}</span></div>`).join('') || '<div class="acct">—</div>';
     return `<div class="stage"><h4>${s}</h4><div class="cnt">${list.length}</div>${items}</div>`;
   }).join('');
 }
 
 function renderAlerts(){
-  const churnAlerts = document.getElementById('churnAlerts');
-  if(!churnAlerts) return;
-  const reasons=d=>{const r=[]; if(d.seatUtil<0.5)r.push('baixa adoção'); if(d.loginFreq<40)r.push('uso baixo'); if(!d.champion)r.push('sem champion'); return r;};
-  const churnList=ACTIVE.filter(d=>d.farol==='vermelho'||d.churn>=45).sort((a,b)=>b.churn-a.churn);
-  churnAlerts.innerHTML=churnList.map(d=>`<div class="alert"><div class="top"><span class="acct-name">${esc(d.name)}</span><span class="pill r">${d.churn}</span></div><div class="why">${reasons(d).join(' · ')}</div></div>`).join('')||'<div class="panel">Nenhum risco.</div>';
+  const reasons = d => { const r=[]; if(d.seatUtil<0.5)r.push('baixa adoção'); if(d.loginFreq<40)r.push('uso baixo'); if(!d.champion)r.push('sem champion'); return r; };
+  const churnList = ACTIVE.filter(d => d.farol==='vermelho' || d.churn>=45).sort((a,b) => b.churn - a.churn);
+  document.getElementById('churnAlerts').innerHTML = churnList.map(d => `<div class="alert"><div class="top"><span class="acct-name">${esc(d.name)}</span><span class="pill r">${d.churn}</span></div><div class="why">${reasons(d).join(' · ')}</div></div>`).join('') || '<div class="panel">Nenhum risco detectado.</div>';
 }
 
-function openModal(id=null){
+/* Gerenciamento Pop-up Modal (Salvar / Editar no Supabase) */
+function openModal(id = null){
   document.getElementById('modalOvl').classList.add('active');
   document.getElementById('accountForm').reset();
-  document.getElementById('f-id').value = id!==null?id:'';
-  if(id!==null){
-    const d = DATA.find(item => item.id === id);
-    if(d){
-      document.getElementById('f-name').value = d.name;
-      document.getElementById('f-csm').value = d.csm;
-      document.getElementById('f-plan').value = d.plan;
-      document.getElementById('f-mrrStart').value = d.mrrStart;
-      document.getElementById('f-mrrNow').value = d.mrrNow;
-      document.getElementById('f-seatsEnt').value = d.seatsEnt;
-      document.getElementById('f-seatsAct').value = d.seatsAct;
-      document.getElementById('f-loginFreq').value = d.loginFreq;
-      document.getElementById('f-lastContact').value = d.lastContact;
-      document.getElementById('f-champion').value = d.champion ? 'Sim' : 'Não';
-      document.getElementById('f-contacts').value = d.contacts;
-      document.getElementById('f-tickets').value = d.tickets;
-      document.getElementById('f-critTickets').value = d.critTickets;
-      document.getElementById('f-csat').value = d.csat;
-      document.getElementById('f-nps').value = d.nps;
-      document.getElementById('f-pay').value = d.pay === 'late' ? 'Atrasado' : 'Em dia';
-      document.getElementById('f-stage').value = d.stage;
-      document.getElementById('f-renewalDays').value = d.renewalDays;
-    }
+  document.getElementById('f-id').value = id || '';
+  
+  if(id){
+    const d = DATA.find(x => x.id === id);
+    document.getElementById('f-name').value = d.name;
+    document.getElementById('f-csm').value = d.csm;
+    document.getElementById('f-plan').value = d.plan;
+    document.getElementById('f-mrrStart').value = d.mrrStart;
+    document.getElementById('f-mrrNow').value = d.mrrNow;
+    document.getElementById('f-seatsEnt').value = d.seatsEnt;
+    document.getElementById('f-seatsAct').value = d.seatsAct;
+    document.getElementById('f-loginFreq').value = d.loginFreq;
+    document.getElementById('f-lastContact').value = d.lastContact;
+    document.getElementById('f-champion').value = d.champion ? 'Sim' : 'Não';
+    document.getElementById('f-contacts').value = d.contacts;
+    document.getElementById('f-tickets').value = d.tickets;
+    document.getElementById('f-critTickets').value = d.critTickets;
+    document.getElementById('f-csat').value = d.csat;
+    document.getElementById('f-nps').value = d.nps;
+    document.getElementById('f-pay').value = d.pay === 'late' ? 'Atrasado' : 'Em dia';
+    document.getElementById('f-stage').value = d.stage;
+    document.getElementById('f-renewalDays').value = d.renewalDays;
   }
 }
-function closeModal(){document.getElementById('modalOvl').classList.remove('active');}
+function closeModal(){ document.getElementById('modalOvl').classList.remove('active'); }
 
-document.getElementById('accountForm').onsubmit=async(e)=>{
+document.getElementById('accountForm').onsubmit = async(e) => {
   e.preventDefault();
   const id = document.getElementById('f-id').value;
+  
   const o = {
     name: document.getElementById('f-name').value,
     csm: document.getElementById('f-csm').value,
@@ -379,22 +412,46 @@ document.getElementById('accountForm').onsubmit=async(e)=>{
     renewalDays: parseInt(document.getElementById('f-renewalDays').value)||365
   };
 
-  if(id === '') {
-    await supabaseClient.from('accounts').insert([o]);
-  } else {
-    await supabaseClient.from('accounts').update(o).eq('id', id);
+  // Se for uma conta nova criada por um analista, vincula ela automaticamente ao ID dele
+  if(!id && !isAdmin) {
+    o.csm_id = currentUser.id;
   }
-  loadData(); closeModal();
+
+  let result;
+  if(id) {
+    result = await supabaseClient.from('accounts').update(o).eq('id', id);
+  } else {
+    result = await supabaseClient.from('accounts').insert([o]);
+  }
+
+  if (result.error) {
+    alert("Erro ao salvar: " + result.error.message);
+  } else {
+    loadData(); closeModal();
+  }
 };
 
 function editAccount(id){ openModal(id); }
-
 async function deleteAccount(id){ 
-  if(confirm('Excluir conta definitivamente?')){ 
-    await supabaseClient.from('accounts').delete().eq('id', id);
-    loadData();
+  if(confirm('Excluir esta conta permanentemente?')){ 
+    const { error } = await supabaseClient.from('accounts').delete().eq('id', id);
+    if(error) alert(error.message); else loadData();
   } 
 }
+
+/* Alteração de Senha Segura via Supabase Auth */
+document.getElementById('pwForm').onsubmit = async(e) => {
+  e.preventDefault();
+  const newPassword = document.getElementById('new-pw').value;
+  
+  const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+  if(error) {
+    alert("Erro ao atualizar: " + error.message);
+  } else {
+    alert('Sua senha foi atualizada com sucesso!');
+    document.getElementById('pwForm').reset();
+  }
+};
 
 function exportCSV(){
   let csv = COLS.join(',') + '\n';
@@ -404,58 +461,19 @@ function exportCSV(){
   });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-  link.setAttribute("download", "cs_data.csv");
+  link.setAttribute("download", "carteira_cs_refuturiza.csv");
   link.click();
 }
 
-document.getElementById('csvInput').onchange = function(e) {
-  const reader = new FileReader();
-  reader.onload = async function() {
-    const lines = reader.result.split('\n');
-    const importedAccounts = [];
-    for(let i = 1; i < lines.length; i++) {
-      if(!lines[i].trim()) continue;
-      const values = lines[i].split(',');
-      importedAccounts.push({
-        name: values[0]?.replace(/"/g, ''),
-        csm: values[1],
-        plan: values[2],
-        mrrStart: parseFloat(values[3]) || 0,
-        mrrNow: parseFloat(values[4]) || 0,
-        seatsEnt: parseInt(values[5]) || 0,
-        seatsAct: parseInt(values[6]) || 0,
-        loginFreq: parseInt(values[7]) || 0,
-        lastContact: parseInt(values[8]) || 0,
-        champion: values[9]?.trim().toLowerCase() === 'sim',
-        contacts: parseInt(values[10]) || 0,
-        tickets: parseInt(values[11]) || 0,
-        critTickets: parseInt(values[12]) || 0,
-        csat: parseInt(values[13]) || 0,
-        nps: parseInt(values[14]) || 0,
-        pay: values[15]?.includes('Atras') ? 'late' : 'ok',
-        stage: values[16] || 'Onboarding',
-        renewalDays: parseInt(values[17]) || 365
-      });
-    }
-    if(importedAccounts.length > 0) {
-      await supabaseClient.from('accounts').insert(importedAccounts);
-      loadData();
-      alert('Importação concluída com sucesso!');
-    }
-  };
-  reader.readAsText(e.target.files[0]);
-};
-
-document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active');
-  const targetSection = document.getElementById(b.dataset.tab);
-  if(targetSection) targetSection.classList.add('active');
+/* Lógica de Troca de Abas */
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  b.classList.add('active'); document.getElementById(b.dataset.tab).classList.add('active');
 });
 
-// Inicialização Limpa e Corrigida
-loadData();
+// Inicialização com encadeamento seguro
+checkAuth().then(loadData);
 </script>
 </body>
 </html>
