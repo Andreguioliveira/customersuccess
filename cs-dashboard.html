@@ -181,7 +181,6 @@
 const SUPABASE_URL = "https://laywwovrscbinipppjfw.supabase.co"; 
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxheXd3b3Zyc2NiaW5pcHBwamZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwOTAzMTUsImV4cCI6MjA5ODY2NjMxNX0.zGub-fupurm5MuoKedqr7_lw0oEeqc7flzMeawAkknk";
 
-// Mudança estratégica de nome para evitar conflitos globais da biblioteca
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function esc(str){
