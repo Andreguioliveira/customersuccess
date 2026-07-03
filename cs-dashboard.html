@@ -107,11 +107,25 @@
 
 <main>
   <div class="databar" id="databar">
-    <span>✅ <b>Sessão Ativa:</b> Modo <span id="mode-text">Restrito</span>.</span>
-    <button class="btn" onclick="openModal()">+ Adicionar Conta</button>
-    <button class="btn ghost" onclick="exportCSV()">Exportar CSV</button>
-    <input type="file" id="csvInput" accept=".csv" style="display:none">
-    <button class="btn ghost" onclick="document.getElementById('csvInput').click()">Importar CSV</button>
+    <span>✅ <b>Sessão Ativa:</b></span>
+    
+    <!-- Filtro de Carteira Dinâmico para Administradores -->
+    <div id="admin-filter-wrap" style="display:none; align-items:center; gap:8px;">
+      <label style="font-size:12px; font-weight:700; color:var(--green-dark)">Visualizar Carteira:</label>
+      <select id="csmFilter" onchange="loadData()" style="padding:6px 10px; border:1px solid var(--green-mid); border-radius:6px; background:#fff; font-family:inherit; font-size:12.5px; color:var(--ink); font-weight:600;">
+        <option value="ALL">🌍 Ver Tudo (Geral Refuturiza)</option>
+        <option value="e2e6f4de-5927-4d60-a34d-72fde88afacc3">👩‍💻 Mirela Liz</option>
+        <option value="49e5560f-9b08-48d3-8a9f-625356f93073">👩‍💻 Stefani Jadi</option>
+      </select>
+    </div>
+    <span id="csm-mode-text" style="font-weight:600; display:inline-block;">Carregando...</span>
+    
+    <div style="margin-left:auto; display:flex; gap:8px;">
+      <button class="btn" onclick="openModal()">+ Adicionar Conta</button>
+      <button class="btn ghost" onclick="exportCSV()">Exportar CSV</button>
+      <input type="file" id="csvInput" accept=".csv" style="display:none">
+      <button class="btn ghost" onclick="document.getElementById('csvInput').click()">Importar CSV</button>
+    </div>
   </div>
 
   <section class="tab active" id="overview">
@@ -231,8 +245,16 @@ async function checkAuth(){
   isAdmin = ADMINS.includes(currentUser.email.toLowerCase());
   
   document.getElementById('user-name').textContent = currentUser.email.split('@')[0];
-  document.getElementById('user-role').textContent = isAdmin ? 'Admin' : 'CSM';
-  document.getElementById('mode-text').textContent = isAdmin ? 'Visão Master' : 'Sua Carteira';
+  document.getElementById('user-role').textContent = isAdmin ? 'Gestor' : 'CSM';
+  
+  if (isAdmin) {
+    document.getElementById('admin-filter-wrap').style.display = 'flex';
+    document.getElementById('csm-mode-text').style.display = 'none';
+  } else {
+    document.getElementById('admin-filter-wrap').style.display = 'none';
+    document.getElementById('csm-mode-text').style.display = 'inline-block';
+    document.getElementById('csm-mode-text').textContent = 'Filtro: Sua Carteira Ativa';
+  }
 }
 
 async function logout(){
@@ -240,14 +262,20 @@ async function logout(){
   window.location.href = 'index.html';
 }
 
-/* Busca Dinâmica de Dados filtrada no Banco */
+/* Busca Dinâmica de Dados filtrada no Banco ou por Seleção de Admin */
 async function loadData(){
   try {
     let query = supabaseClient.from('accounts').select('*');
     
-    // Se NÃO for administrador, aplica a trava de segurança direto no banco pelo ID logado
     if (!isAdmin) {
+      // Regra estrita para analistas logados
       query = query.eq('csm_id', currentUser.id);
+    } else {
+      // Regra flexível para você e Lizi (Gestores)
+      const selectedFilter = document.getElementById('csmFilter').value;
+      if (selectedFilter !== 'ALL') {
+        query = query.eq('csm_id', selectedFilter);
+      }
     }
     
     const { data, error } = await query;
@@ -412,9 +440,15 @@ document.getElementById('accountForm').onsubmit = async(e) => {
     renewalDays: parseInt(document.getElementById('f-renewalDays').value)||365
   };
 
-  // Se for uma conta nova criada por um analista, vincula ela automaticamente ao ID dele
-  if(!id && !isAdmin) {
-    o.csm_id = currentUser.id;
+  // Mapeamento Inteligente: se for analista salvando conta nova, amarra o ID dele
+  if(!id) {
+    if (!isAdmin) {
+      o.csm_id = currentUser.id;
+    } else {
+      // Se o administrador estiver criando a conta com um filtro de analista selecionado, já salva nela
+      const currentFilter = document.getElementById('csmFilter').value;
+      if (currentFilter !== 'ALL') o.csm_id = currentFilter;
+    }
   }
 
   let result;
