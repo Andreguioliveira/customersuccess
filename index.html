@@ -36,20 +36,15 @@
   </form>
 </div>
 <script>
-document.getElementById('loginForm').onsubmit = async (e) => {
+document.getElementById('loginForm').onsubmit = (e) => {
   e.preventDefault();
   const username = document.getElementById('username').value;
   const password = document.getElementById('password').value;
   const errorMsg = document.getElementById('errorMsg');
   
-  const res = await fetch('/api/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
-  });
-  
-  if (res.ok) {
-    window.location.href = '/';
+  // Validação estática direta via Frontend
+  if (username === 'admin' && password === '123') {
+    window.location.href = 'cs-dashboard.html';
   } else {
     errorMsg.style.display = 'block';
   }
